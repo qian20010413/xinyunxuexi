@@ -30,9 +30,10 @@ export interface Question {
   options?: string[];
   correctAnswer: string;
   explanation: string;
+  svgContent?: string; // 新增：用于存放图形化内容的 SVG 字符串
   userAnswer?: string;
   isCorrect?: boolean;
-  timestamp: number;
+  timestamp?: number;
 }
 
 export interface Mistake extends Question {

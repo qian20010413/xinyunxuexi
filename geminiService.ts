@@ -1,100 +1,55 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { Subject, Difficulty, Question, AiConfig } from "./types";
+import { Subject, Difficulty, Question } from "./types";
 
-// Default config for Gemini if none provided
-const DEFAULT_GEMINI_MODEL = "gemini-3-flash-preview";
+// Initialize Gemini API with the correct structure and model
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-async function callOpenAiCompatible(config: AiConfig, prompt: string): Promise<any> {
-  const response = await fetch(`${config.baseUrl}/v1/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${config.apiKey}`
-    },
-    body: JSON.stringify({
-      model: config.modelName,
-      messages: [
-        { role: 'system', content: '你是一位资深的中国初中老师。请严格按照JSON格式返回题目。' },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' }
-    })
-  });
-
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error?.message || "AI 接口请求失败");
-  }
-
-  const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
-}
-
-export async function generateSessionQuestions(
-  subject: Subject, 
-  config: AiConfig,
-  count: number = 20
-): Promise<Question[]> {
-  const prompt = `
-    你正在为七年级学生杜欣芸编写一套专题练习卷。
-    科目：${subject}。数量：${count}。
-    范围：【人教版七年级上册】。
-    
-    返回JSON数组，每个对象包含：
-    - topic: 知识点
-    - content: 题目内容
-    - options: 如果是选择题则提供4个选项数组，填空题为空数组
-    - correctAnswer: 选择题仅给字母 A/B/C/D，填空题给文本
-    - explanation: 亲切详细的解析
-    
-    难度分布：前5题基础，中间12题简单/进阶，最后3题综合挑战。
-  `;
-
+/**
+ * Generates an educational question using Gemini 3 Flash.
+ * Uses structured output (responseSchema) to ensure consistency with the app's types.
+ */
+export async function generateAiQuestion(subject: Subject, difficulty: Difficulty): Promise<Question | null> {
   try {
-    // Fix: Use 'any' type and initialize with an empty array to prevent type mismatch errors
-    // when assigning results from different AI providers that might return nested objects.
-    let result: any = [];
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `为七年级学生生成一道${subject}学科的${difficulty}难度的练习题。题目需要符合人教版教材标准，侧重能力提优。`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            topic: { type: Type.STRING, description: '知识点名称' },
+            content: { type: Type.STRING, description: '题目正文' },
+            options: { 
+              type: Type.ARRAY, 
+              items: { type: Type.STRING },
+              description: '如果是多项选择题，提供4个选项（如 A. xxx）；如果是填空题则提供空数组'
+            },
+            correctAnswer: { type: Type.STRING, description: '正确答案（字母或数值）' },
+            explanation: { type: Type.STRING, description: '详细的解题思路和知识点解析' },
+          },
+          required: ["topic", "content", "correctAnswer", "explanation"],
+        },
+      },
+    });
+
+    const result = JSON.parse(response.text || '{}');
     
-    if (config.provider === 'gemini') {
-      const ai = new GoogleGenAI({ apiKey: config.apiKey });
-      const response = await ai.models.generateContent({
-        model: config.modelName || DEFAULT_GEMINI_MODEL,
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json"
-        }
-      });
-      // Fix: Safely handle response.text property (not a method)
-      const responseText = response.text || "[]";
-      result = JSON.parse(responseText.trim());
-    } else {
-      result = await callOpenAiCompatible(config, prompt);
-      // If the domestic AI returns an object with a field like 'questions', extract it
-      if (result && !Array.isArray(result) && (result as any).questions) {
-        result = (result as any).questions;
-      }
-      if (result && !Array.isArray(result)) {
-         // Fallback for some AI that wrap the array in an object
-         const possibleArray = Object.values(result).find(val => Array.isArray(val));
-         if (possibleArray) result = possibleArray;
-      }
-    }
-
-    // Fix: Ensure result is an array before attempting to use .map() to avoid runtime errors
-    if (!Array.isArray(result)) {
-      throw new Error("AI 返回格式解析失败，未获取到有效题目列表");
-    }
-
-    return result.map((q: any, index: number) => ({
-      ...q,
-      id: `q-${Date.now()}-${index}`,
+    // Validate result and return formatted Question
+    return {
+      id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       subject,
-      difficulty: index < 5 ? Difficulty.CONCEPT : index < 12 ? Difficulty.EASY : index < 17 ? Difficulty.MEDIUM : Difficulty.HARD,
+      difficulty,
+      topic: result.topic || '综合练习',
+      content: result.content,
+      options: result.options && result.options.length > 0 ? result.options : undefined,
+      correctAnswer: result.correctAnswer,
+      explanation: result.explanation,
       timestamp: Date.now()
-    }));
-  } catch (error: any) {
-    console.error("AI Generation Error:", error);
-    throw new Error(error.message || "获取题目失败，请检查 AI 配置或网络");
+    };
+  } catch (error) {
+    console.error("Gemini AI generation failed:", error);
+    return null;
   }
 }

@@ -5,6 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>欣芸的专属提优练习室</title>
+    <!-- 注入 process 补丁，防止 GitHub Pages 部署后因为 process.env 导致的白屏 -->
+    <script>
+      window.process = {
+        env: {
+          API_KEY: "" // 这里在运行时会被系统自动注入，手动注入则写在这里
+        }
+      };
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <style>

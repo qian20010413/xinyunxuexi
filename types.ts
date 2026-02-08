@@ -12,6 +12,15 @@ export enum Difficulty {
   HARD = '综合挑战'
 }
 
+export type AiProvider = 'gemini' | 'openai-compatible';
+
+export interface AiConfig {
+  provider: AiProvider;
+  apiKey: string;
+  baseUrl: string;
+  modelName: string;
+}
+
 export interface Question {
   id: string;
   subject: Subject;

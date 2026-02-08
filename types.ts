@@ -30,7 +30,7 @@ export interface Question {
   options?: string[];
   correctAnswer: string;
   explanation: string;
-  svgContent?: string; // 新增：用于存放图形化内容的 SVG 字符串
+  svgContent?: string;
   userAnswer?: string;
   isCorrect?: boolean;
   timestamp?: number;
@@ -41,8 +41,17 @@ export interface Mistake extends Question {
   retryCount: number;
 }
 
+// 新增：每日练习快照
+export interface DailyRecord {
+  date: string; // YYYY-MM-DD
+  count: number;
+  correct: number;
+  subjects: Record<string, number>;
+}
+
 export interface Progress {
   completed: number;
   correct: number;
   subjectStats: Record<Subject, { completed: number; correct: number }>;
+  history: DailyRecord[];
 }

@@ -23,29 +23,60 @@ const createNumberLineSVG = (pointX: number, label: string) => {
 };
 
 /**
- * 几何图形生成工具：线段与中点
+ * 几何图形生成工具：线段与点
  */
-const createSegmentSVG = (labelA: string, labelB: string, labelM?: string) => {
+const createSegmentSVG = (points: { pos: number; label: string; color?: string }[]) => {
+  const startX = 40;
+  const endX = 260;
+  const totalLen = 100; // 模拟总长度刻度
+  
+  const getX = (p: number) => startX + (p / totalLen) * (endX - startX);
+
   return `
-    <svg viewBox="0 0 300 60" class="w-full max-w-sm h-16">
-      <line x1="50" y1="30" x2="250" y2="30" stroke="#475569" stroke-width="3" />
-      <circle cx="50" cy="30" r="4" fill="#1e293b" />
-      <text x="45" y="50" font-size="12" font-weight="bold">${labelA}</text>
-      <circle cx="250" cy="30" r="4" fill="#1e293b" />
-      <text x="245" y="50" font-size="12" font-weight="bold">${labelB}</text>
-      ${labelM ? `
-        <circle cx="150" cy="30" r="4" fill="#6366f1" />
-        <text x="145" y="50" font-size="12" font-weight="bold" fill="#6366f1">${labelM}</text>
-      ` : ''}
+    <svg viewBox="0 0 300 70" class="w-full max-w-sm h-20">
+      <rect width="300" height="70" fill="#f8fafc" rx="12" />
+      <line x1="${startX}" y1="35" x2="${endX}" y2="35" stroke="#475569" stroke-width="3" stroke-linecap="round" />
+      ${points.map(p => `
+        <circle cx="${getX(p.pos)}" cy="35" r="5" fill="${p.color || '#1e293b'}" />
+        <text x="${getX(p.pos)}" y="58" font-size="12" font-weight="bold" text-anchor="middle" fill="${p.color || '#1e293b'}">${p.label}</text>
+      `).join('')}
     </svg>
   `;
 };
 
 /**
- * 几何图形生成工具：角度 (支持多射线)
+ * 几何图形生成工具：时钟角度
  */
-const createAngleSVG = (angles: number[], labels: string[] = ['O', 'A', 'B', 'C']) => {
-  const origin = { x: 100, y: 90 };
+const createClockSVG = (hour: number, minute: number) => {
+  const center = { x: 50, y: 50 };
+  const r = 40;
+  const hAngle = (hour % 12 + minute / 60) * 30 - 90;
+  const mAngle = minute * 6 - 90;
+  
+  const hX = center.x + 22 * Math.cos(hAngle * Math.PI / 180);
+  const hY = center.y + 22 * Math.sin(hAngle * Math.PI / 180);
+  const mX = center.x + 35 * Math.cos(mAngle * Math.PI / 180);
+  const mY = center.y + 35 * Math.sin(mAngle * Math.PI / 180);
+
+  return `
+    <svg viewBox="0 0 100 100" class="w-24 h-24 mx-auto">
+      <circle cx="50" cy="50" r="45" fill="none" stroke="#475569" stroke-width="2" />
+      ${[...Array(12)].map((_, i) => {
+        const ang = i * 30 * Math.PI / 180;
+        return `<line x1="${50 + 38 * Math.cos(ang)}" y1="${50 + 38 * Math.sin(ang)}" x2="${50 + 43 * Math.cos(ang)}" y2="${50 + 43 * Math.sin(ang)}" stroke="#94a3b8" stroke-width="1" />`;
+      }).join('')}
+      <line x1="50" y1="50" x2="${hX}" y2="${hY}" stroke="#1e293b" stroke-width="3" stroke-linecap="round" />
+      <line x1="50" y1="50" x2="${mX}" y2="${mY}" stroke="#6366f1" stroke-width="2" stroke-linecap="round" />
+      <circle cx="50" cy="50" r="3" fill="#1e293b" />
+    </svg>
+  `;
+};
+
+/**
+ * 几何图形生成工具：多射线角度
+ */
+const createAngleSVG = (angles: number[], labels: string[] = ['O', 'A', 'B', 'C', 'D']) => {
+  const origin = { x: 110, y: 90 };
   const radius = 80;
   let paths = `<line x1="${origin.x}" y1="${origin.y}" x2="${origin.x + radius}" y2="${origin.y}" stroke="#475569" stroke-width="2" />`;
   let texts = `<text x="${origin.x + radius + 8}" y="${origin.y + 5}" font-size="12" font-weight="bold">${labels[1]}</text>`;
@@ -74,119 +105,119 @@ const createAngleSVG = (angles: number[], labels: string[] = ['O', 'A', 'B', 'C'
 };
 
 /**
- * 核心数学生成器：涵盖人教版七年级上册全部重点
+ * 核心数学练习生成器
  */
 const generateMathQuestion = (id: string): Question => {
   const types = [
-    'num_line_val', 'abs_comparison', 'scientific_notation', 'approx_val',
-    'algebra_simplify', 'algebra_eval', 'equation_solve_simple', 'equation_solve_complex',
-    'equation_word_problem', 'segment_midpoint', 'angle_calc_complex', 'angle_complementary'
+    'clock_angle', 'segment_addition', 'angle_sum_around', 'segment_midpoint_complex',
+    'angle_bisector_triple', 'num_line_range', 'algebra_geometric_area', 'equation_balance',
+    'vertical_angle_graph', 'complementary_graph'
   ];
   const type = pick(types);
 
   switch(type) {
-    case 'num_line_val': {
-      const val = Math.floor(Math.random() * 9) - 4;
+    case 'clock_angle': {
+      const hours = pick([3, 4, 9, 10]);
+      const angle = (hours === 3 || hours === 9) ? 90 : (hours === 4 ? 120 : 60);
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '几何·时钟角度',
+        content: `当闹钟指向 ${hours}:00 整时，时针与分针构成的较小角度是多少度？`,
+        svgContent: createClockSVG(hours, 0),
+        correctAnswer: angle.toString(),
+        explanation: `时钟一圈 360°，分为 12 个大格，每大格 360÷12 = 30°。${hours} 点整时针分针跨越 ${hours > 6 ? 12-hours : hours} 个大格，角度为 ${angle}°。`
+      };
+    }
+    case 'segment_addition': {
+      const ab = 8, bc = 5;
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '几何·线段计算',
+        content: `如图，点 B 在线段 AC 上，已知 AB = ${ab}cm，BC = ${bc}cm。求线段 AC 的长度。`,
+        svgContent: createSegmentSVG([{pos: 0, label: 'A'}, {pos: 60, label: 'B'}, {pos: 100, label: 'C'}]),
+        correctAnswer: (ab + bc).toString(),
+        explanation: `根据线段的和差关系，AC = AB + BC = ${ab} + ${bc} = ${ab + bc}cm。`
+      };
+    }
+    case 'segment_midpoint_complex': {
+      const am = 6;
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '几何·线段中点',
+        content: `点 M 是线段 AB 的中点，点 N 是线段 MB 的中点。若 AM = ${am}cm，求线段 AN 的长度。`,
+        svgContent: createSegmentSVG([{pos: 0, label: 'A'}, {pos: 50, label: 'M', color: '#6366f1'}, {pos: 75, label: 'N', color: '#ef4444'}, {pos: 100, label: 'B'}]),
+        correctAnswer: (am * 1.5).toString(),
+        explanation: `1. M 是 AB 中点，则 MB = AM = ${am}cm； 2. N 是 MB 中点，则 MN = 1/2 MB = ${am/2}cm； 3. AN = AM + MN = ${am} + ${am/2} = ${am*1.5}cm。`
+      };
+    }
+    case 'angle_bisector_triple': {
+      const aob = 120;
+      const boc = 40;
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.HARD, topic: '几何·多射线计算',
+        content: `如图，∠AOC = ${aob}°，∠BOC = ${boc}°，且 OB 在 ∠AOC 内部。若 OD 平分 ∠AOB，求 ∠COD 的度数。`,
+        svgContent: createAngleSVG([boc, (aob-boc)/2, (aob-boc)/2], ['O', 'C', 'B', 'D', 'A']),
+        correctAnswer: (boc + (aob - boc) / 2).toString(),
+        explanation: `1. ∠AOB = ∠AOC - ∠BOC = ${aob} - ${boc} = ${aob-boc}°； 2. OD 平分 ∠AOB，则 ∠BOD = 1/2 ∠AOB = ${(aob-boc)/2}°； 3. ∠COD = ∠COB + ∠BOD = ${boc} + ${(aob-boc)/2} = ${boc + (aob-boc)/2}°。`
+      };
+    }
+    case 'num_line_range': {
+      const val = -2;
       return {
         id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '有理数·数轴',
-        content: `观察数轴，点 A 表示的数是 ${val}，则点 A 到原点的距离是多少？`,
+        content: `在数轴上，到原点距离等于 3 的点所表示的数中，位于点 A（图中红点）左侧的是哪个数？`,
         svgContent: createNumberLineSVG(val, 'A'),
-        correctAnswer: Math.abs(val).toString(),
-        explanation: `数轴上一个数到原点的距离等于这个数的绝对值。|${val}| = ${Math.abs(val)}。`
+        correctAnswer: '-3',
+        explanation: `到原点距离为 3 的数有 3 和 -3。图中点 A 表示 -2。位于 -2 左侧的数比 -2 小，故为 -3。`
       };
     }
-    case 'abs_comparison': {
-      const a = -Math.floor(Math.random() * 10 + 1);
-      const b = -Math.floor(Math.random() * 10 + 1);
-      const isGreater = a > b;
+    case 'vertical_angle_graph': {
+      const ang = 55;
       return {
-        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '有理数·比较',
-        content: `比较有理数的大小：${a} ____ ${b} (填写 > 或 <)`,
-        correctAnswer: isGreater ? '>' : (a === b ? '=' : '<'),
-        explanation: `两个负数比较大小，绝对值大的反而小。|${a}| = ${Math.abs(a)}，|${b}| = ${Math.abs(b)}。`
+        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '几何·对顶角',
+        content: `两条直线相交，已知 ∠1 = ${ang}°，则它的对顶角 ∠3 = ？`,
+        correctAnswer: ang.toString(),
+        explanation: `对顶角相等。由于 ∠1 和 ∠3 是对顶角，所以 ∠3 = ∠1 = ${ang}°。`
       };
     }
-    case 'scientific_notation': {
-      const base = (Math.random() * 8 + 1).toFixed(2);
-      const exp = Math.floor(Math.random() * 4 + 4);
-      const original = Math.round(parseFloat(base) * Math.pow(10, exp));
+    case 'complementary_graph': {
+      const ang = 35;
       return {
-        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '有理数·科学记数法',
-        content: `将数字 ${original.toLocaleString()} 用科学记数法表示为 a × 10ⁿ 的形式，则 n 的值是？`,
-        correctAnswer: exp.toString(),
-        explanation: `科学记数法格式为 a × 10ⁿ (1≤|a|<10)。${original} 相当于将小数点向左移动了 ${exp} 位，故 n = ${exp}。`
-      };
-    }
-    case 'algebra_simplify': {
-      const a = Math.floor(Math.random() * 5 + 2);
-      const b = Math.floor(Math.random() * 5 + 2);
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '整式·化简',
-        content: `化简整式：${a}x - (${b}x - 3)的结果是？`,
-        correctAnswer: `${a - b}x+3`,
-        explanation: `去括号法则：括号前是负号，去掉括号后里面各项都要变号。原式 = ${a}x - ${b}x + 3 = (${a - b})x + 3。`
-      };
-    }
-    case 'equation_solve_simple': {
-      const x = Math.floor(Math.random() * 10 + 1);
-      const a = Math.floor(Math.random() * 5 + 2);
-      const b = Math.floor(Math.random() * 10 + 1);
-      const res = a * x + b;
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '一元一次方程·解法',
-        content: `解方程：${a}x + ${b} = ${res}，则 x = ？`,
-        correctAnswer: x.toString(),
-        explanation: `1. 移项得 ${a}x = ${res} - ${b} = ${a * x}； 2. 系数化为1得 x = ${x}。`
-      };
-    }
-    case 'equation_word_problem': {
-      const price = Math.floor(Math.random() * 20 + 10) * 10;
-      const count = Math.floor(Math.random() * 3 + 2);
-      const total = price * count;
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.HARD, topic: '一元一次方程·应用',
-        content: `某商店售出 ${count} 件相同的商品，共收入 ${total} 元。若每件商品的成本价是其售价的 80%，则每件商品的利润是多少元？`,
-        correctAnswer: (price * 0.2).toString(),
-        explanation: `1. 售价 = ${total} ÷ ${count} = ${price}元； 2. 成本 = ${price} × 80% = ${price * 0.8}元； 3. 利润 = 售价 - 成本 = ${price - price * 0.8}元。`
-      };
-    }
-    case 'segment_midpoint': {
-      const ab = (Math.floor(Math.random() * 5) + 5) * 2;
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '几何初步·线段中点',
-        content: `如图，点 M 是线段 AB 的中点。若 AB = ${ab}cm，则 AM 的长度是多少 cm？`,
-        svgContent: createSegmentSVG('A', 'B', 'M'),
-        correctAnswer: (ab / 2).toString(),
-        explanation: `线段中点将线段平分为两段相等的线段。AM = 1/2 AB = ${ab} ÷ 2 = ${ab / 2}cm。`
-      };
-    }
-    case 'angle_calc_complex': {
-      const aoc = 180;
-      const boc = Math.floor(Math.random() * 50 + 40);
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '几何初步·角度计算',
-        content: `已知 A, O, C 三点在同一直线上（即 ∠AOC = 180°），OB 是一条射线，且 ∠BOC = ${boc}°。则 ∠AOB 的度数是？`,
-        svgContent: createAngleSVG([boc], ['O', 'C', 'B', 'A']),
-        correctAnswer: (180 - boc).toString(),
-        explanation: `平角等于 180°。∠AOB = ∠AOC - ∠BOC = 180° - ${boc}° = ${180 - boc}°。`
-      };
-    }
-    case 'angle_complementary': {
-      const ang = Math.floor(Math.random() * 40 + 20);
-      return {
-        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '几何初步·余角',
-        content: `如果 ∠1 = ${ang}°，且 ∠1 与 ∠2 互为余角（和为90°），那么 ∠2 的度数是多少？`,
+        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '几何·余角性质',
+        content: `如图 ∠AOB = 90°，若 ∠1 = ${ang}°，求 ∠2 的度数。`,
+        svgContent: createAngleSVG([ang, 90-ang], ['O', 'A', 'M', 'B']),
         correctAnswer: (90 - ang).toString(),
-        explanation: `互余的两个角之和为 90°。∠2 = 90° - ∠1 = 90° - ${ang}° = ${90 - ang}°。`
+        explanation: `∠AOB 是直角（90°），∠1 与 ∠2 互余。∠2 = 90° - ${ang}° = ${90-ang}°。`
+      };
+    }
+    case 'angle_sum_around': {
+      const a = 120, b = 130;
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.HARD, topic: '几何·周角性质',
+        content: `从点 O 引出三条射线 OA, OB, OC。已知 ∠AOB = ${a}°，∠BOC = ${b}°，求 ∠AOC 的度数（小于180°的部分）。`,
+        correctAnswer: (360 - a - b).toString(),
+        explanation: `周角为 360°。∠AOC = 360° - ∠AOB - ∠BOC = 360 - ${a} - ${b} = ${360-a-b}°。`
+      };
+    }
+    case 'algebra_geometric_area': {
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '整式·几何应用',
+        content: `一个长方形的长为 2a，宽为 a+3，则这个长方形的面积可以表示为？`,
+        correctAnswer: `2a^2+6a`,
+        explanation: `面积 = 长 × 宽 = 2a(a + 3) = 2a² + 6a。`
+      };
+    }
+    case 'equation_balance': {
+      return {
+        id, subject: Subject.MATH, difficulty: Difficulty.MEDIUM, topic: '方程·等式性质',
+        content: `天平左边放 2 个相同的球和 5g 砝码，右边放 15g 砝码，天平平衡。设球重 x 克，列方程得？`,
+        correctAnswer: `2x+5=15`,
+        explanation: `左边重量 2x + 5，右边重量 15。平衡意味着两边相等。`
       };
     }
     default: {
-      const val = Math.floor(Math.random() * 10);
       return {
-        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '有理数·绝对值',
-        content: `若 |x| = ${val}，且 x < 0，则 x 的值是？`,
-        correctAnswer: (-val).toString(),
-        explanation: `绝对值等于 ${val} 的数有两个，分别是 ${val} 和 -${val}。因为题目要求 x < 0，所以 x = -${val}。`
+        id, subject: Subject.MATH, difficulty: Difficulty.EASY, topic: '有理数·相反数',
+        content: `若 a = -8，则 a 的相反数与 -3 的和是？`,
+        correctAnswer: '5',
+        explanation: `-8 的相反数是 8。8 + (-3) = 5。`
       };
     }
   }
@@ -198,7 +229,6 @@ export const OFFLINE_BANK: Record<Subject, Question[]> = {
     { id: 'c2', subject: Subject.CHINESE, difficulty: Difficulty.CONCEPT, topic: '字义辨析', content: '“不求甚解”中“甚”的意思是？', options: ['A. 甚至', 'B. 过分', 'C. 很多', 'D. 厉害'], correctAnswer: 'B', explanation: '原意是不在字句上过分推敲。' },
     { id: 'c3', subject: Subject.CHINESE, difficulty: Difficulty.CONCEPT, topic: '修辞手法', content: '“盼望着，盼望着，东风来了，春天的脚步近了”运用了什么修辞？', options: ['A. 比喻、拟人', 'B. 反复、拟人', 'C. 夸张、排比', 'D. 对偶、反复'], correctAnswer: 'B', explanation: '“盼望着”重复出现是反复，“脚步近了”赋予春天人的行为，是拟人。' },
     { id: 'c4', subject: Subject.CHINESE, difficulty: Difficulty.CONCEPT, topic: '古诗名句', content: '“海日生残夜，江春入旧年”体现了时序更替的自然理趣。这句诗出自？', options: ['A. 《次北固山下》', 'B. 《天净沙·秋思》', 'C. 《闻王昌龄左迁龙标遥有此寄》', 'D. 《夜雨寄北》'], correctAnswer: 'A', explanation: '这是唐代诗人王湾《次北固山下》的名句。' },
-    { id: 'c5', subject: Subject.CHINESE, difficulty: Difficulty.MEDIUM, topic: '词语运用', content: '下列句子中加点成语使用不恰当的一项是？', options: ['A. 老师煞有介事地讲起了这个故事。', 'B. 他说话总是咄咄逼人，让人不舒服。', 'C. 听完这段演讲，大家都恍然大悟。', 'D. 这件事办得可谓是各得其所。'], correctAnswer: 'A', explanation: '“煞有介事”指像真有那么回事似的，多指装模作样，用在这里褒贬不当。' },
   ],
   [Subject.MATH]: [], 
   [Subject.ENGLISH]: [
@@ -206,20 +236,17 @@ export const OFFLINE_BANK: Record<Subject, Question[]> = {
     { id: 'e2', subject: Subject.ENGLISH, difficulty: Difficulty.CONCEPT, topic: '冠词用法', content: 'This is ____ apple. It is ____ red apple.', options: ['A. a; a', 'B. an; an', 'C. an; a', 'D. a; an'], correctAnswer: 'C', explanation: 'apple是以元音音素开头，用an；red是以辅音音素开头，用a。' },
     { id: 'e3', subject: Subject.ENGLISH, difficulty: Difficulty.CONCEPT, topic: '单复数转换', content: 'What are those? They are ____.', options: ['A. box', 'B. boxs', 'C. boxes', 'D. boxing'], correctAnswer: 'C', explanation: '以x结尾的名词变复数加es。' },
     { id: 'e4', subject: Subject.ENGLISH, difficulty: Difficulty.CONCEPT, topic: '日常用语', content: '—How do you spell "pen"? —____.', options: ['A. It is a pen', 'B. P-E-N', 'C. Yes, I can', 'D. No, thanks'], correctAnswer: 'B', explanation: '询问如何拼写，需要按字母顺序读出。' },
-    { id: 'e5', subject: Subject.ENGLISH, difficulty: Difficulty.MEDIUM, topic: '介词搭配', content: 'My birthday is ____ October 1st.', options: ['A. in', 'B. on', 'C. at', 'D. to'], correctAnswer: 'B', explanation: '在具体的某一天或具体日期的上午、下午用介词on。' },
   ]
 };
 
 export function getRandomQuestions(subject: Subject, count: number): Question[] {
   let results: Question[] = [];
   if (subject === Subject.MATH) {
-    // 动态生成数学题目，确保覆盖多种知识点
     for (let i = 0; i < count; i++) {
       results.push(generateMathQuestion(`math-${Date.now()}-${i}-${Math.random()}`));
     }
   } else {
     const bank = OFFLINE_BANK[subject];
-    // 随机打乱题库并选取
     const shuffled = [...bank].sort(() => 0.5 - Math.random());
     for (let i = 0; i < count; i++) {
       const q = shuffled[i % shuffled.length];

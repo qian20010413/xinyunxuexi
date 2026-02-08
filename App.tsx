@@ -17,7 +17,26 @@ import {
 } from 'lucide-react';
 
 const SESSION_TOTAL = 10;
-const normalize = (str: string) => str.trim().toUpperCase().replace(/[.．。]/g, '');
+
+/**
+ * 增强版答案归一化逻辑
+ * 1. 移除所有空格和中文标点
+ * 2. 统一转大写
+ * 3. 数学特化：将 "1X" 转换为 "X"，处理系数1的问题
+ */
+const normalize = (str: string) => {
+  if (!str) return '';
+  let result = str.trim()
+    .replace(/\s+/g, '') // 移除所有空格
+    .replace(/[.．。，,]/g, '') // 移除常见标点
+    .toUpperCase();
+  
+  // 数学特化处理：去掉变量前的系数1 (如 1X -> X, 1A -> A)
+  // 匹配数字1后紧跟字母的情况
+  result = result.replace(/\b1([A-Z])\b/g, '$1');
+  
+  return result;
+};
 
 const Header: React.FC<{ name: string }> = ({ name }) => (
   <header className="bg-white border-b border-gray-100 sticky top-0 z-50">
@@ -80,7 +99,9 @@ const App: React.FC = () => {
     if (!session || session.showExplanation || !answer.trim()) return;
 
     const currentQ = session.questions[session.currentIndex];
-    const isCorrect = normalize(answer) === normalize(currentQ.correctAnswer);
+    const normalizedUser = normalize(answer);
+    const normalizedCorrect = normalize(currentQ.correctAnswer);
+    const isCorrect = normalizedUser === normalizedCorrect;
 
     if (!isCorrect) {
       const existing = mistakes.find(m => m.id === currentQ.id);
@@ -283,7 +304,6 @@ const App: React.FC = () => {
 
             {session.showExplanation && (
               <div className="mt-8 pt-6 border-t border-gray-100 animate-in fade-in slide-in-from-bottom-4">
-                {/* 显眼的对错判断提示 */}
                 <div className={`flex items-center gap-2 mb-4 p-4 rounded-2xl border-2 font-black ${isCorrect ? 'bg-green-50 border-green-200 text-green-600' : 'bg-red-50 border-red-200 text-red-600'}`}>
                   {isCorrect ? (
                     <><CheckCircle2 size={24} /> 回答正确！棒极了！</>
